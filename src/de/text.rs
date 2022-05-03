@@ -15,6 +15,7 @@ macro_rules! parse_impl {
     };
 }
 
+#[derive(Clone)]
 pub struct TextDeserializer<'de> {
     text: &'de str,
 }
@@ -140,9 +141,9 @@ impl<'de> de::Deserializer<'de> for TextDeserializer<'de> {
         self,
         _name: &'static str,
         _variants: &'static [&'static str],
-        _visitor: V,
+        visitor: V,
     ) -> Result<V::Value, Self::Error> {
-        Err(Error::ExpectedEnum(NodeKind::Text))
+        visitor.visit_enum(self)
     }
 
     #[inline]
@@ -153,5 +154,55 @@ impl<'de> de::Deserializer<'de> for TextDeserializer<'de> {
     #[inline]
     fn deserialize_ignored_any<V: de::Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
         self.deserialize_any(visitor)
+    }
+}
+
+impl<'de> de::EnumAccess<'de> for TextDeserializer<'de> {
+    type Error = Error;
+
+    type Variant = Self;
+
+    #[inline]
+    fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
+    where
+        V: de::DeserializeSeed<'de>,
+    {
+        let res = seed.deserialize(self.clone())?;
+        Ok((res, self))
+    }
+}
+
+impl<'de> de::VariantAccess<'de> for TextDeserializer<'de> {
+    type Error = Error;
+
+    #[inline]
+    fn unit_variant(self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    #[inline]
+    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
+    where
+        T: de::DeserializeSeed<'de>,
+    {
+        seed.deserialize(self)
+    }
+
+    fn tuple_variant<V>(self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        Err(Error::ExpectedArray(NodeKind::Text))
+    }
+
+    fn struct_variant<V>(
+        self,
+        _fields: &'static [&'static str],
+        _visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        Err(Error::ExpectedMap(NodeKind::Text))
     }
 }

@@ -84,22 +84,22 @@ where
     parse_impl!(deserialize_char);
 
     fn deserialize_str<V: de::Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        let str = self.into_text().ok_or(Error::NodesExhausted)?;
+        let str = self.into_text().unwrap_or_default();
         visitor.visit_borrowed_str(str)
     }
 
     fn deserialize_string<V: de::Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        let str = self.into_text().ok_or(Error::NodesExhausted)?;
+        let str = self.into_text().unwrap_or_default();
         visitor.visit_string(str.to_owned())
     }
 
     fn deserialize_bytes<V: de::Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        let str = self.into_text().ok_or(Error::NodesExhausted)?;
+        let str = self.into_text().unwrap_or_default();
         visitor.visit_borrowed_bytes(str.as_bytes())
     }
 
     fn deserialize_byte_buf<V: de::Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        let str = self.into_text().ok_or(Error::NodesExhausted)?;
+        let str = self.into_text().unwrap_or_default();
         visitor.visit_byte_buf(str.as_bytes().to_vec())
     }
 
@@ -251,6 +251,12 @@ impl<'doc: 'de, 'de> de::MapAccess<'de> for NodeMapAcces<'doc, 'de> {
                     seed.deserialize(TextDeserializer::new(txt))
                 } else if *head == "$all" {
                     seed.deserialize(ChildrenDeserializer::new(self.node.children()))
+                } else if let Some(tag) = head.strip_prefix("$ns:") {
+                    let it = self
+                        .node
+                        .children()
+                        .filter(|node| node.has_tag_name(tag) && node.tag_name().namespace().is_some());
+                    seed.deserialize(ChildrenDeserializer::new(it))
                 } else if let Some(attr) = self.node.attribute(*head) {
                     seed.deserialize(TextDeserializer::new(attr))
                 } else {
