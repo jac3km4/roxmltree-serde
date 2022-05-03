@@ -5,6 +5,7 @@ use std::fmt;
 
 pub use de::{from_doc, Deserializer};
 pub use error::{Error, Result};
+pub use roxmltree::{Document, Error as ParseError};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind {
