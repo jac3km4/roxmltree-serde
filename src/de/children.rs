@@ -268,6 +268,7 @@ struct NodeEnumAccess<'doc, 'de> {
 }
 
 impl<'doc, 'de> NodeEnumAccess<'doc, 'de> {
+    #[inline]
     fn new(node: roxmltree::Node<'doc, 'de>) -> Self {
         Self { node }
     }
